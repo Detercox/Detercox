@@ -20,12 +20,12 @@ import { getFirestore, doc, getDoc, setDoc, collection,
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey:            "AIzaSyDvjbuHWtg2vEB3sxP0sVxdwUF7YX6u7Fo",
-  authDomain:        "ventas-de-aseo.firebaseapp.com",
-  projectId:         "ventas-de-aseo",
-  storageBucket:     "ventas-de-aseo.firebasestorage.app",
-  messagingSenderId: "1088073831775",
-  appId:             "1:1088073831775:web:f0608a9ca07662ed9592ea"
+  apiKey:            "AIzaSyA9nCGYZZXzY9KOOrAnUzLSjq9tyVNxFZQ",
+  authDomain:        "detercox.firebaseapp.com",
+  projectId:         "detercox",
+  storageBucket:     "detercox.firebasestorage.app",
+  messagingSenderId: "513593434018",
+  appId:             "1:513593434018:web:102048940a544591349cfb"
 };
 
 const app  = initializeApp(firebaseConfig);
@@ -34,7 +34,7 @@ const db   = getFirestore(app);
 
 // ── Utilidades Firestore ──
 // El vendedor apunta a los datos del dueño, no a los suyos
-const DUENO_UID = 'REEMPLAZAR_UID_DETERCOX';
+const DUENO_UID = 'xn0KXlDOB4aPKw6p8uhXwOHPZo82';
 const uidActivo = () => {
   // Si el usuario es vendedor (no es el dueño), usa el UID del dueño
   return DUENO_UID; // Siempre apunta al dueño — el rol controla los permisos en la UI
