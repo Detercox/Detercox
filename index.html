@@ -2837,7 +2837,7 @@ document.addEventListener('click',e=>{
 </script>
 <script>
 // Bridge: expose module functions to inline event handlers
-function doLogin(){if(window.doLogin)window.doLogin();else alert('Cargando... intente de nuevo');}
+function doLogin(){if(window.doLogin && window.doLogin !== doLogin)window.doLogin();else alert('Cargando... intente de nuevo');}
 function doLogout(){if(window.doLogout)window.doLogout();}
 function goTo(p){if(window.goTo)window.goTo(p);}
 </script>
