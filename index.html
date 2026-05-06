@@ -1342,7 +1342,7 @@ window.exportarExcel = function() {
   const vS=S.ventas.filter(v=>v.fecha>=lunes&&v.fecha<=sab);
   let csv='\uFEFF'+'Fecha,Hora,Producto,Cantidad,Precio,Subtotal,Pago,Total,Factura\n';
   vS.forEach(v=>v.items.forEach(i=>{
-    csv+=`${v.fecha},${v.hora||''},${i.nombre.replace(/,/g,' ')},${i.qty||1},${i.precio},${i.precio*(i.qty||1)},${v.pago},${v.total},${v._id||''}\n`;
+    csv+= v.fecha + ',' + (v.hora||'') + ',' + i.nombre.replace(/,/g,' ') + ',' + (i.qty||1) + ',' + i.precio + ',' + (i.precio*(i.qty||1)) + ',' + v.pago + ',' + v.total + ',' + (v._id||'') + '\n';
   }));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
