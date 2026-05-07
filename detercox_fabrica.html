@@ -422,18 +422,18 @@ import { getFirestore, doc, getDoc, setDoc, collection,
 
 // ── FIREBASE CONFIG (reemplazar con proyecto Detercox) ──
 const firebaseConfig = {
-  apiKey:           "REEMPLAZAR_API_KEY",
-  authDomain:       "REEMPLAZAR.firebaseapp.com",
-  projectId:        "REEMPLAZAR_PROJECT_ID",
-  storageBucket:    "REEMPLAZAR.appspot.com",
-  messagingSenderId:"REEMPLAZAR",
-  appId:            "REEMPLAZAR"
+  apiKey:           "AIzaSyA9nCGYZZXzY9KOOrAnUzLSjq9tyVNxFZQ",
+  authDomain:       "detercox.firebaseapp.com",
+  projectId:        "detercox",
+  storageBucket:    "detercox.firebasestorage.app",
+  messagingSenderId:"513593434018",
+  appId:            "1:513593434018:web:102048940a544591349cfb"
 };
 
 // ── UIDS autorizados para fábrica ──
-const UIDS_FABRICA = ['REEMPLAZAR_UID_OPERARIO', 'REEMPLAZAR_UID_DUENO'];
+const UIDS_FABRICA = ['LQb3e4xBifMk3Z8kW4GjLBvuCK33', 'xn0KXlDOB4aPKw6p8uhXwOHPZo82'];
 // ── UID del proyecto tienda (para sincronizar inventario) ──
-const TIENDA_UID = 'REEMPLAZAR_UID_TIENDA';
+const TIENDA_UID = 'xn0KXlDOB4aPKw6p8uhXwOHPZo82';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
