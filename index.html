@@ -1300,38 +1300,55 @@ window.renderReporte = function() {
           </div>`;}).join('')}
       </div>
       <div class="card" style="margin-top:14px">
-        <div style="font-weight:600;font-size:14px;margin-bottom:12px">👤 Ventas y comisiones por vendedor</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:12px">👤 Ventas, utilidad y comisiones por vendedor</div>
         ${(()=>{
           const vendedores={};
           vS.forEach(v=>{
-            const vend=v.vendedor||'Sin asignar';
-            if(!vendedores[vend]) vendedores[vend]={total:0,pedidos:0};
+            const vend=v.vendedor||'';
+            if(!vend) return;
+            if(!vendedores[vend]) vendedores[vend]={total:0,pedidos:0,utilidad:0};
             vendedores[vend].total+=v.total;
             vendedores[vend].pedidos++;
+            (v.items||[]).forEach(item=>{
+              const prod=S.productos.find(p=>p._id===item._id);
+              if(item.tipo==='granel'){
+                vendedores[vend].utilidad+=(item.precio||0)-((prod?prod.compra||0:0)*(item.cantGranel||0));
+              } else {
+                vendedores[vend].utilidad+=((item.precio||0)-(prod?prod.compra||0:0))*(item.qty||1);
+              }
+            });
           });
           const lista=Object.entries(vendedores).sort((a,b)=>b[1].total-a[1].total);
-          if(!lista.length) return '<div style="color:var(--t3);font-size:13px">Sin ventas con vendedor asignado</div>';
-          return `<table style="width:100%;border-collapse:collapse;font-size:13px">
+          if(!lista.length) return '<div style="color:var(--t3);font-size:13px;padding:8px">Sin ventas de vendedores esta semana</div>';
+          const totalVtas=lista.reduce((a,b)=>a+b[1].total,0);
+          const totalUtil=lista.reduce((a,b)=>a+b[1].utilidad,0);
+          return \`<table style="width:100%;border-collapse:collapse;font-size:12px">
             <thead><tr style="background:var(--s2)">
-              <th style="padding:7px 10px;text-align:left;border-radius:4px 0 0 4px">Vendedor</th>
-              <th style="padding:7px 10px;text-align:center">Pedidos</th>
-              <th style="padding:7px 10px;text-align:right">Total ventas</th>
-              <th style="padding:7px 10px;text-align:right;border-radius:0 4px 4px 0;color:var(--a-d)">Comisión (5%)</th>
+              <th style="padding:6px 8px;text-align:left">Vendedor</th>
+              <th style="padding:6px 8px;text-align:center">Pedidos</th>
+              <th style="padding:6px 8px;text-align:right">Ventas</th>
+              <th style="padding:6px 8px;text-align:right;color:var(--a-d)">Utilidad</th>
+              <th style="padding:6px 8px;text-align:right;color:var(--info)">Comisión 5%</th>
             </tr></thead>
-            <tbody>${lista.map(([vend,d])=>`<tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:7px 10px;font-weight:500">${vend}</td>
-              <td style="padding:7px 10px;text-align:center">${d.pedidos}</td>
-              <td style="padding:7px 10px;text-align:right" class="mono">${fmt(d.total)}</td>
-              <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--a-d)" class="mono">${fmt(d.total*0.05)}</td>
-            </tr>`).join('')}
+            <tbody>\${lista.map(([vend,d])=>\`<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 8px;font-weight:500">\${vend}</td>
+              <td style="padding:6px 8px;text-align:center">\${d.pedidos}</td>
+              <td style="padding:6px 8px;text-align:right" class="mono">\${fmt(d.total)}</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:600;color:var(--a-d)" class="mono">\${fmt(d.utilidad)}</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--info)" class="mono">\${fmt(d.total*0.05)}</td>
+            </tr>\`).join('')}
             <tr style="background:var(--s2);font-weight:700">
-              <td style="padding:7px 10px">TOTAL</td>
-              <td style="padding:7px 10px;text-align:center">${vS.length}</td>
-              <td style="padding:7px 10px;text-align:right" class="mono">${fmt(vS.reduce((a,v)=>a+v.total,0))}</td>
-              <td style="padding:7px 10px;text-align:right;color:var(--a-d)" class="mono">${fmt(vS.reduce((a,v)=>a+v.total,0)*0.05)}</td>
+              <td style="padding:6px 8px">TOTAL</td>
+              <td style="padding:6px 8px;text-align:center">\${lista.reduce((a,b)=>a+b[1].pedidos,0)}</td>
+              <td style="padding:6px 8px;text-align:right" class="mono">\${fmt(totalVtas)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--a-d)" class="mono">\${fmt(totalUtil)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--info)" class="mono">\${fmt(totalVtas*0.05)}</td>
             </tr></tbody>
-          </table>`;
+          </table>\`;
         })()}
+      </div>
+    </div>`;
+};})()}
       </div>
     </div>`;
 };
@@ -2759,7 +2776,7 @@ window.actualizarValorPerdida = function() {
   if(!_perdidaProd) return;
   const cant = parseFloat(document.getElementById('perd-cantidad').value)||0;
   if(cant > 0) {
-    const precio = _perdidaProd.tipo==='granel' ? (_perdidaProd.precioUnidad||0) : (_perdidaProd.venta||0);
+    const precio = _perdidaProd.compra||0; // precio de COMPRA para calcular pérdida real
     const valor = precio * cant;
     document.getElementById('perd-valor-preview').style.display = 'flex';
     document.getElementById('perd-valor-num').textContent = fmt(valor);
@@ -2840,6 +2857,18 @@ document.addEventListener('click',e=>{
 function doLogin(){if(window.doLogin && window.doLogin !== doLogin)window.doLogin();else alert('Cargando... intente de nuevo');}
 function doLogout(){if(window.doLogout)window.doLogout();}
 function goTo(p){if(window.goTo)window.goTo(p);}
+function capturarUbicacionPed(){if(window.capturarUbicacionPed)window.capturarUbicacionPed();}
+function navegarUbicacion(id){if(window.navegarUbicacion)window.navegarUbicacion(id);}
+function abrirModalPerdida(){if(window.abrirModalPerdida)window.abrirModalPerdida();}
+function verFacFiado(id){if(window.verFacFiado)window.verFacFiado(id);}
+function imprimirFacFiado(){if(window.imprimirFacFiado)window.imprimirFacFiado();}
+function eliminarFiado(id){if(window.eliminarFiado)window.eliminarFiado(id);}
+function exportarInventarioExcel(){if(window.exportarInventarioExcel)window.exportarInventarioExcel();}
+function cierreAnualContable(){if(window.cierreAnualContable)window.cierreAnualContable();}
+function buscarProdPerdida(){if(window.buscarProdPerdida)window.buscarProdPerdida();}
+function selProdPerdida(id){if(window.selProdPerdida)window.selProdPerdida(id);}
+function actualizarValorPerdida(){if(window.actualizarValorPerdida)window.actualizarValorPerdida();}
+function confirmarPerdida(){if(window.confirmarPerdida)window.confirmarPerdida();}
 </script>
 
 <style>
