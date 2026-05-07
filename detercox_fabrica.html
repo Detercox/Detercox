@@ -346,8 +346,15 @@ tr:hover td{background:var(--s2)}
     <div class="fg"><label class="fl">Fecha</label><input class="fi" id="mp-fecha" type="date"></div>
   </div>
   <div class="fg"><label class="fl">Nueva MP (si no está en la lista)</label>
-    <div style="display:flex;gap:8px">
-      <input class="fi" id="mp-nueva" placeholder="Nombre de la nueva materia prima" style="flex:1">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input class="fi" id="mp-nueva" placeholder="Nombre de la nueva materia prima" style="flex:2;min-width:150px">
+      <select class="fi" id="mp-nueva-unidad" style="width:80px;flex:none">
+        <option value="L">L</option>
+        <option value="ml">ml</option>
+        <option value="kg">kg</option>
+        <option value="g">g</option>
+      </select>
+      <input class="fi" id="mp-nueva-min" type="number" placeholder="Stock mín." style="width:90px;flex:none" value="5">
       <button class="btn ba2" onclick="crearNuevaMP()">+ Crear</button>
     </div>
   </div>
@@ -603,10 +610,12 @@ function renderMprimas() {
   if(!S.mprimas.length) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:20px">Sin materias primas registradas</td></tr>'; return; }
   tbody.innerHTML = S.mprimas.map(m=>{
     const bajo = (m.stock||0) <= (m.stockMin||5);
+    const u = m.unidad||'L';
+    const fmtU = n => n+' '+u;
     return `<tr>
       <td style="font-weight:500">${m.nombre}</td>
-      <td class="${bajo?'':''}"><b style="color:${bajo?'var(--danger)':'var(--green-d)'}">${fmtL(m.stock||0)}</b></td>
-      <td>${fmtL(m.stockMin||5)}</td>
+      <td><b style="color:${bajo?'var(--danger)':'var(--green-d)'}">${fmtU(m.stock||0)}</b></td>
+      <td>${fmtU(m.stockMin||5)}</td>
       <td><span class="badge ${bajo?'br':'bg'}">${bajo?'Stock bajo':'Normal'}</span></td>
       <td><button class="btn sm" onclick="editarMP('${m._id}')">Editar</button></td>
     </tr>`;
@@ -625,8 +634,10 @@ window.abrirModalMP = function() {
 window.crearNuevaMP = async function() {
   const nombre = document.getElementById('mp-nueva').value.trim();
   if(!nombre){toast('Ingresa el nombre',false);return;}
-  const id = await agregarFab('mprimas',{nombre,stock:0,stockMin:5,fecha:hoy()});
-  S.mprimas.push({_id:id,nombre,stock:0,stockMin:5});
+  const unidad = document.getElementById('mp-nueva-unidad')?.value||'L';
+  const stockMin = parseFloat(document.getElementById('mp-nueva-min')?.value)||5;
+  const id = await agregarFab('mprimas',{nombre,stock:0,stockMin,unidad,fecha:hoy()});
+  S.mprimas.push({_id:id,nombre,stock:0,stockMin,unidad});
   document.getElementById('mp-nueva').value='';
   const sel=document.getElementById('mp-select');
   sel.innerHTML+= `<option value="${id}" selected>${nombre} (Stock: 0L)</option>`;
@@ -649,14 +660,19 @@ window.confirmarEntradaMP = async function() {
 
 window.editarMP = function(id) {
   const mp = S.mprimas.find(m=>m._id===id);
-  const nuevo = prompt(`Stock actual de "${mp.nombre}": ${fmtL(mp.stock||0)}\n\nIngresa el nuevo stock total en litros:`);
+  const nuevo = prompt(`MATERIA PRIMA: ${mp.nombre}\n\nStock actual: ${fmtL(mp.stock||0)}\nStock mínimo actual: ${fmtL(mp.stockMin||5)}\n\nIngresa el nuevo stock total:`);
   if(nuevo===null)return;
   const val = parseFloat(nuevo);
   if(isNaN(val)||val<0){toast('Valor inválido');return;}
-  actualizarFab('mprimas',id,{stock:val});
-  mp.stock=val;
+  const nuevoMin = prompt(`Stock mínimo de alerta para "${mp.nombre}":\n(actual: ${fmtL(mp.stockMin||5)})`);
+  const minVal = nuevoMin!==null ? (parseFloat(nuevoMin)||mp.stockMin||5) : (mp.stockMin||5);
+  // Unidad
+  const nuevaUnidad = prompt(`Unidad de medida (L, ml, kg, g):\n(actual: ${mp.unidad||'L'})`);
+  const unidad = nuevaUnidad?.trim()||mp.unidad||'L';
+  actualizarFab('mprimas',id,{stock:val,stockMin:minVal,unidad});
+  mp.stock=val; mp.stockMin=minVal; mp.unidad=unidad;
   renderMprimas();
-  toast(`✓ Stock de ${mp.nombre} actualizado a ${fmtL(val)}`);
+  toast(`✓ ${mp.nombre} actualizado`);
 };
 
 // ── TARROS ──
@@ -756,11 +772,15 @@ window.addIngrediente=function(){
 };
 
 function renderIngredientesForm(){
+  const mpOpts=S.mprimas.map(m=>`<option value="${m.nombre}" data-idx="${S.mprimas.indexOf(m)}">${m.nombre}</option>`).join('');
   document.getElementById('form-ingredientes').innerHTML=_formIngredientes.map((ing,i)=>`
     <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
-      <input class="fi" value="${ing.nombre}" placeholder="Ingrediente" style="flex:2" oninput="_formIngredientes[${i}].nombre=this.value">
-      <input class="fi" type="number" value="${ing.cantidad||''}" placeholder="Cantidad" style="flex:1" oninput="_formIngredientes[${i}].cantidad=parseFloat(this.value)||0">
-      <select class="fi" style="flex:1" onchange="_formIngredientes[${i}].unidad=this.value">
+      <select class="fi" style="flex:2" onchange="selIngMP(${i},this.value)">
+        <option value="">— Seleccionar materia prima —</option>
+        ${mpOpts.replace('value="'+ing.nombre+'"','value="'+ing.nombre+'" selected')}
+      </select>
+      <input class="fi" type="number" value="${ing.cantidad||''}" placeholder="Cant." style="flex:1" oninput="_formIngredientes[${i}].cantidad=parseFloat(this.value)||0">
+      <select class="fi" style="width:70px;flex:none" onchange="_formIngredientes[${i}].unidad=this.value">
         <option ${ing.unidad==='ml'?'selected':''}>ml</option>
         <option ${ing.unidad==='L'?'selected':''}>L</option>
         <option ${ing.unidad==='g'?'selected':''}>g</option>
@@ -769,6 +789,11 @@ function renderIngredientesForm(){
       <button class="btn sm bd" onclick="_formIngredientes.splice(${i},1);renderIngredientesForm()">✕</button>
     </div>`).join('');
 }
+
+window.selIngMP=function(i,nombre){
+  _formIngredientes[i].nombre=nombre;
+  renderIngredientesForm();
+};
 
 window.confirmarFormula=async function(){
   const nombre=document.getElementById('form-nombre').value.trim();
@@ -804,14 +829,17 @@ window.calcFabricacion=function(){
   const alerta=document.getElementById('fab-alerta');
   let alertas=[];
   const rows=(f.ingredientes||[]).map(ing=>{
-    const total=ing.cantidad*litros/1000; // convert ml to L
-    const mp=S.mprimas.find(m=>m.nombre===ing.nombre||m.nombre.toLowerCase().includes(ing.nombre.toLowerCase()));
+    // ing.unidad can be ml or L - convert to L for comparison
+    const cantPorLitro = ing.unidad==='ml' ? ing.cantidad/1000 : ing.cantidad;
+    const total = cantPorLitro * litros;
+    const mp=S.mprimas.find(m=>m.nombre===ing.nombre);
     const disponible=mp?mp.stock:null;
+    const unidadMP=mp?.unidad||ing.unidad||'L';
     const suficiente=disponible===null||disponible>=total;
-    if(!suficiente) alertas.push(`${ing.nombre}: necesita ${fmtL(total)}, disponible ${fmtL(disponible)}`);
+    if(!suficiente) alertas.push(`${ing.nombre}: necesita ${total.toFixed(2)}${unidadMP}, disponible ${disponible!==null?disponible+unidadMP:'no registrada'}`);
     return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
       <span>${ing.nombre}</span>
-      <span style="color:${suficiente?'var(--danger)':'var(--danger)'}">— ${fmtL(total)} ${disponible!==null?`(tiene: ${fmtL(disponible)})`:'(no registrada)'}</span>
+      <span style="color:var(--danger)">— ${total.toFixed(2)} ${unidadMP} ${disponible!==null?'(tiene: '+disponible+unidadMP+')':'(no registrada)'}</span>
     </div>`;
   });
   document.getElementById('fab-mp-lista').innerHTML=rows.join('');
@@ -828,8 +856,9 @@ window.confirmarFabricacion=async function(){
   const f=S.formulas.find(x=>x._id===fId);
   // Descontar materias primas
   for(const ing of (f.ingredientes||[])){
-    const total=ing.cantidad*litros/1000;
-    const mp=S.mprimas.find(m=>m.nombre===ing.nombre||m.nombre.toLowerCase().includes(ing.nombre.toLowerCase()));
+    const cantPorLitro = ing.unidad==='ml' ? ing.cantidad/1000 : ing.cantidad;
+    const total = cantPorLitro * litros;
+    const mp=S.mprimas.find(m=>m.nombre===ing.nombre);
     if(mp){
       const nuevo=Math.max(0,(mp.stock||0)-total);
       await actualizarFab('mprimas',mp._id,{stock:nuevo});
